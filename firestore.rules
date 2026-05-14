@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny ALL
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == "blackragus123@gmail.com" && request.auth.token.email_verified == true;
+    }
+
+    function isValidKey(data) {
+      return data.key is string && 
+             data.key.size() <= 256 &&
+             data.isLifetime is bool &&
+             data.createdAt is timestamp &&
+             data.createdBy is string;
+    }
+
+    // Access keys
+    match /access_keys/{keyId} {
+      // Admin can do everything
+      allow read, write: if isAdmin();
+      
+      // Public can READ if they have the exact key ID (which is the key itself)
+      // This allows verification without exposing the whole list
+      allow get: if true;
+    }
+  }
+}
