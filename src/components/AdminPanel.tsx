@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { db, auth, ADMIN_EMAIL } from '../lib/firebase';
 import { collection, setDoc, getDocs, query, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
@@ -10,20 +10,54 @@ interface KeyRecord {
   expiresAt: Timestamp | null;
   isLifetime: boolean;
   createdAt: Timestamp;
+  hwid?: string | null;
 }
 
 export default function AdminPanel({ onClose }: { onClose: () => void }) {
   const [keys, setKeys] = useState<KeyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [resettingId, setResettingId] = useState<string | null>(null);
   const [expiryType, setExpiryType] = useState<'lifetime' | '7days' | '30days'>('7days');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
-    fetchKeys();
+    if (auth.currentUser?.email === ADMIN_EMAIL) {
+      fetchKeys();
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleAdminAuth = async () => {
+    setIsLoggingIn(true);
+    try {
+      const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth');
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      if (result.user.email === ADMIN_EMAIL) {
+        fetchKeys();
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Authentication failed.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user?.email === ADMIN_EMAIL) {
+        fetchKeys();
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   const fetchKeys = async () => {
+    setLoading(true);
     try {
       const q = query(collection(db, 'access_keys'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
@@ -82,11 +116,66 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const handleResetHWID = async (id: string) => {
+    setResettingId(id);
+    try {
+      const { updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'access_keys', id), { hwid: null });
+      setKeys(keys.map(k => k.id === id ? { ...k, hwid: null } : k));
+    } catch (e) {
+      console.error(e);
+      alert("Failed to reset HWID");
+    } finally {
+      setResettingId(null);
+    }
+  };
+
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
+
+  if (auth.currentUser?.email !== ADMIN_EMAIL) {
+    return (
+      <div className="fixed inset-0 z-[300] bg-zinc-950 flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-zinc-900 rounded-[40px] w-full max-w-[440px] shadow-2xl overflow-hidden border border-white/5"
+        >
+          <div className="p-8 text-center bg-zinc-800/50">
+            <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-500/40">
+              <ShieldCheck size={32} className="text-white" />
+            </div>
+            <h3 className="text-2xl font-black tracking-tight text-white uppercase">Admin Login</h3>
+            <p className="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-[0.2em]">Authorized Personnel Only</p>
+          </div>
+          
+          <div className="p-8 space-y-6">
+            <div className="space-y-3">
+              <button 
+                type="button"
+                onClick={handleAdminAuth}
+                disabled={isLoggingIn}
+                className="w-full bg-white text-black font-black py-4 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/5 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isLoggingIn ? <Loader2 className="animate-spin text-black" /> : "SIGN IN WITH GOOGLE"}
+              </button>
+              
+              <button 
+                type="button"
+                onClick={onClose}
+                className="w-full text-zinc-500 hover:text-white font-bold py-3 transition-colors text-sm uppercase tracking-widest"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[300] bg-zinc-950 flex flex-col md:flex-row">
@@ -176,6 +265,17 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                   className="bg-zinc-900 border border-white/5 p-6 rounded-[32px] flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-6">
+                    <button
+                      onClick={() => handleResetHWID(k.id)}
+                      disabled={resettingId === k.id || !k.hwid}
+                      className={`text-[10px] font-black px-4 py-2 rounded-xl transition-all uppercase tracking-tighter ${
+                        k.hwid 
+                          ? 'bg-zinc-700 text-white hover:bg-zinc-600 shadow-lg' 
+                          : 'bg-zinc-800/50 text-zinc-600 cursor-not-allowed'
+                      }`}
+                    >
+                      {resettingId === k.id ? <Loader2 size={12} className="animate-spin" /> : "HWID RESET"}
+                    </button>
                     <div className="w-14 h-14 bg-zinc-800 rounded-2xl flex items-center justify-center text-blue-500">
                       <Key size={24} />
                     </div>
@@ -202,9 +302,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                   
                   <button
                     onClick={() => handleDeleteKey(k.id)}
-                    className="p-4 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all"
+                    className="flex flex-col items-center gap-1 p-3 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all min-w-[80px]"
+                    title="Revoke Access"
                   >
                     <Trash2 size={20} />
+                    <span className="text-[10px] font-black uppercase tracking-tighter">Revoke</span>
                   </button>
                 </motion.div>
               ))

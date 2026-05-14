@@ -20,6 +20,17 @@ export default function KeyGateModal({ onVerify, onAdminLogin }: KeyGateModalPro
     setError(false);
     
     try {
+      // 1. Get User IP
+      let ip = 'Unknown';
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        ip = ipData.ip;
+      } catch (e) {
+        console.error("IP Fetch failed", e);
+      }
+
+      // 2. Check Key in Firestore
       const docRef = doc(db, 'access_keys', inputKey.trim());
       const docSnap = await getDocFromServer(docRef);
 
@@ -27,14 +38,49 @@ export default function KeyGateModal({ onVerify, onAdminLogin }: KeyGateModalPro
         const data = docSnap.data();
         const now = Timestamp.now();
         
-        // Check expiry
+        // 3. Check expiry
         if (!data.isLifetime && data.expiresAt && data.expiresAt.toMillis() < now.toMillis()) {
           setError(true);
-        } else {
+          await fetch('/api/log-access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: inputKey, ip, status: 'error', msg: 'Attempted to use an expired key.' })
+          });
+        } 
+        // 4. Check HWID (IP)
+        else if (data.hwid && data.hwid !== ip) {
+          setError(true);
+          await fetch('/api/log-access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: inputKey, ip, status: 'error', msg: `HWID Mismatch! Key is locked to ${data.hwid}` })
+          });
+          alert(`Key is locked to another HWID/IP. Contact support to reset.`);
+        }
+        else {
+          // Success! Associate HWID if not set
+          if (!data.hwid) {
+            const { updateDoc } = await import('firebase/firestore');
+            await updateDoc(docRef, { hwid: ip });
+          }
+
+          // Log success to discord
+          await fetch('/api/log-access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: inputKey, ip, status: 'success', msg: data.hwid ? 'Returning user (HWID Match)' : 'New user (HWID Associated)' })
+          });
+
           onVerify();
         }
       } else {
         setError(true);
+        // Log invalid attempt
+        await fetch('/api/log-access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: inputKey, ip, status: 'error', msg: 'Attempted to use a non-existent key.' })
+        });
       }
     } catch (e) {
       console.error(e);
@@ -56,7 +102,7 @@ export default function KeyGateModal({ onVerify, onAdminLogin }: KeyGateModalPro
             <ShieldCheck size={32} />
           </div>
           <h3 className="text-2xl font-black tracking-tight">SCorbin</h3>
-          <p className="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-[0.2em]">Verified Access Only</p>
+          <p className="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-[0.2em]">Buy from corbin</p>
         </div>
 
         <div className="p-8">
@@ -109,7 +155,7 @@ export default function KeyGateModal({ onVerify, onAdminLogin }: KeyGateModalPro
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                alert("Please contact the administrator for a valid access key.");
+                alert("ily.");
               }}
               className="w-full bg-zinc-100 text-zinc-700 font-bold py-4 rounded-2xl hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-sm"
             >
@@ -124,9 +170,10 @@ export default function KeyGateModal({ onVerify, onAdminLogin }: KeyGateModalPro
 
           <button 
             onClick={onAdminLogin}
-            className="w-full mt-4 text-[10px] text-zinc-300 font-bold uppercase tracking-widest hover:text-white transition-colors"
+            disabled={isChecking}
+            className="w-full mt-4 text-[10px] text-zinc-300 font-bold uppercase tracking-widest hover:text-white transition-colors disabled:opacity-50"
           >
-            Admin Authorization
+            {isChecking ? 'Authenticating...' : 'Admin Authorization'}
           </button>
         </div>
       </motion.div>

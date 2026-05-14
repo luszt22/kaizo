@@ -35,14 +35,12 @@ export default function Topbar({
       <a href="#" className="text-xl font-black tracking-tighter">
         R<span className="inline-block transform rotate-12">O</span>BLOX
       </a>
-      <nav className="hidden md:flex gap-7 ml-2">
-        {['Charts', 'Marketplace', 'Create', 'Robux'].map((item, i) => (
+      <nav className="hidden md:flex gap-6 ml-2">
+        {['Charts', 'Marketplace', 'Create', 'Robux'].map((item) => (
           <a
             key={item}
             href="#"
-            className={`text-sm font-semibold py-1 border-b-2 transition-colors ${
-              i === 3 ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-blue-600 hover:border-blue-600'
-            }`}
+            className="text-[13px] font-bold text-[#232527] hover:text-blue-600 transition-colors"
           >
             {item}
           </a>
@@ -50,53 +48,57 @@ export default function Topbar({
       </nav>
       <form 
         onSubmit={handleSubmit}
-        className="flex-1 max-w-[380px] mx-auto hidden sm:flex items-center gap-2 bg-gray-100 px-4 py-1.5 rounded-full text-gray-500"
+        className="flex-1 max-w-[440px] mx-auto hidden sm:flex items-center gap-2 bg-[#EBEDF0] border border-[#DEE1E5] px-3 py-1 rounded-md text-[#616A72] group focus-within:border-zinc-400 focus-within:bg-white transition-all relative"
       >
-        <Search size={16} />
+        <Search size={16} strokeWidth={2.5} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search Profiles"
-          className="bg-transparent border-none outline-none text-sm w-full text-gray-900"
+          placeholder="Search"
+          className="bg-transparent border-none outline-none text-[13px] w-full text-zinc-900 placeholder:text-[#8D949A]"
         />
       </form>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900" />
-          <span>{user.displayName}</span>
+        <div className="flex items-center gap-2 text-[13px] font-bold text-[#393B3D]">
+          <div className="w-[30px] h-[30px] rounded-full overflow-hidden border border-[#BDC3C7] bg-white">
+            <img 
+              src={user.avatarUrl || "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-C318C9101602477C9F9A7C91ECEEE44A-Png/150/150/AvatarHeadshot/Webp/noFilter"} 
+              alt="User Avatar"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (target.src !== "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-C318C9101602477C9F9A7C91ECEEE44A-Png/150/150/AvatarHeadshot/Webp/noFilter") {
+                  target.src = "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-C318C9101602477C9F9A7C91ECEEE44A-Png/150/150/AvatarHeadshot/Webp/noFilter";
+                }
+              }}
+            />
+          </div>
+          <span className="hidden lg:inline">{user.displayName}</span>
         </div>
-        <button className="relative flex text-gray-900">
+        <button className="relative flex text-[#393B3D] hover:text-black">
           <Bell size={20} />
-          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-[#E2231A] text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
             4
           </span>
         </button>
-        <div className="flex items-center gap-1.5 text-sm font-semibold">
-          <RobuxIcon size={18} className="text-slate-800" />
+        <div className="flex items-center gap-1.5 text-[13px] font-bold text-[#393B3D]">
+          <RobuxIcon size={20} />
           <span>{user.robux.toLocaleString()}</span>
         </div>
         <button 
           onClick={onOpenSettings}
-          className="text-gray-400 hover:text-gray-900 transition-colors"
+          className="text-[#616A72] hover:text-black transition-colors"
         >
           <Settings size={20} />
         </button>
-        {currentUser?.email === adminEmail ? (
-          <button 
-            onClick={onOpenAdmin}
-            className="flex items-center gap-1 bg-red-600 text-white text-[10px] font-black px-3 py-1.5 rounded-full hover:bg-red-700 transition-all uppercase tracking-tighter shadow-lg shadow-red-500/20"
-          >
-            <Shield size={12} />
-            Console
-          </button>
-        ) : !currentUser ? (
-          <button 
-            onClick={onLogin}
-            className="text-[10px] bg-zinc-100 text-zinc-500 font-bold px-3 py-1.5 rounded-full hover:bg-zinc-200"
-          >
-            ADMIN
-          </button>
-        ) : null}
+        <button 
+          onClick={onOpenAdmin}
+          className="flex items-center gap-1 bg-zinc-800 text-white text-[10px] font-black px-3 py-1.5 rounded-full hover:bg-black transition-all uppercase tracking-tighter shadow-lg shadow-black/10"
+        >
+          <Shield size={12} />
+          Admin
+        </button>
       </div>
     </header>
   );

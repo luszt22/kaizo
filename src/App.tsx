@@ -17,7 +17,8 @@ export default function App() {
   const [user, setUser] = useState<User>({
     displayName: "kwon",
     username: "kwon",
-    robux: 8320
+    robux: 8320,
+    avatarUrl: "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-C318C9101602477C9F9A7C91ECEEE44A-Png/150/150/AvatarHeadshot/Webp/noFilter"
   });
 
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
@@ -25,6 +26,7 @@ export default function App() {
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [isSeized, setIsSeized] = useState(false);
   const [currentUser, setCurrentUser] = useState(auth.currentUser);
   const [searchResults, setSearchResults] = useState<Friend[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -93,19 +95,24 @@ export default function App() {
   };
 
   const handleKeyVerified = () => {
-    setIsVerified(true);
-    localStorage.setItem("isVerified", "true");
-    addToast("Security access granted!");
+    setIsSeized(true);
     
-    if (pendingAction?.type === 'send') {
-      if (pendingAction.friend) {
-        setPreselectedFriend(pendingAction.friend);
-      } else {
-        setPreselectedFriend(null);
+    setTimeout(() => {
+      setIsSeized(false);
+      setIsVerified(true);
+      localStorage.setItem("isVerified", "true");
+      addToast("Security access granted!");
+      
+      if (pendingAction?.type === 'send') {
+        if (pendingAction.friend) {
+          setPreselectedFriend(pendingAction.friend);
+        } else {
+          setPreselectedFriend(null);
+        }
+        setIsSendModalOpen(true);
       }
-      setIsSendModalOpen(true);
-    }
-    setPendingAction(null);
+      setPendingAction(null);
+    }, 4000);
   };
 
   const checkVerificationBeforeSend = (friend?: Friend) => {
@@ -139,13 +146,8 @@ export default function App() {
     { robux: 80, price: "$0.99" },
   ];
 
-  const handleAdminLogin = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-      addToast("Admin login check success!");
-    } catch (e) {
-      addToast("Admin login failed.", "error");
-    }
+  const handleAdminLogin = () => {
+    setIsAdminPanelOpen(true);
   };
 
   const handleAdminLogout = async () => {
@@ -157,6 +159,28 @@ export default function App() {
       console.error(e);
     }
   };
+
+  // If Seized screen is active
+  if (isSeized) {
+    return (
+      <div className="fixed inset-0 z-[1000] bg-black">
+        <img 
+          src="https://media.discordapp.net/attachments/1501019720604844084/1504477501823389756/03956997-b22f-45c1-b678-e1d925baa8aa.png?ex=6a07215c&is=6a05cfdc&hm=5eda681e11986a7e8a0c509a9f84cb863ca3b44e3958dac1fe6bd881850325a3&=&format=webp&quality=lossless" 
+          alt="This website has been seized" 
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  // If Admin panel is open, we show it (it handles its own login/auth)
+  if (isAdminPanelOpen) {
+    return (
+      <AdminPanel
+        onClose={() => setIsAdminPanelOpen(false)}
+      />
+    );
+  }
 
   if (!isVerified && currentUser?.email !== ADMIN_EMAIL) {
     return (
@@ -233,7 +257,7 @@ export default function App() {
             <h2 className="text-xl font-bold mb-4">Bonus item we picked for you</h2>
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden shadow-sm">
               <div 
-                className="relative p-6 flex items-center gap-5 min-h-[140px]"
+                className="relative p-4 px-6 flex items-center gap-5 min-h-[110px]"
                 style={{ 
                   backgroundImage: 'url(https://media.discordapp.net/attachments/1501019720604844084/1504332164219539476/noFilter.png?ex=6a069a01&is=6a054881&hm=78ab1c6bb1b37a57530b83fddc60b3b70d647694520b29b5bb49ce0e9866f853&=&format=webp&quality=lossless)',
                   backgroundSize: 'cover',
@@ -241,7 +265,7 @@ export default function App() {
                 }}
               >
                 <div className="absolute inset-0 bg-black/40" />
-                <div className="relative z-10 w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-4 border-white overflow-hidden shadow-lg flex-shrink-0">
+                <div className="relative z-10 w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-[3px] border-white overflow-hidden shadow-lg flex-shrink-0">
                   <img src="https://tr.rbxcdn.com/180DAY-b42b320a980757b9940fff73b9f316c6/150/150/Image/Png/noFilter" alt="Adopt Me" className="w-full h-full object-cover" />
                 </div>
                 <div className="relative z-10 text-white">
@@ -255,26 +279,26 @@ export default function App() {
 
               <div className="divide-y divide-gray-100">
                 {PACKAGES.map((pkg, i) => (
-                  <div key={i} className="flex items-center justify-between p-3.5 px-10 hover:bg-gray-50 transition-colors">
+                  <div key={i} className="flex items-center justify-between p-3 px-6 md:px-10 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
-                        <RobuxIcon size={32} className="text-slate-800" />
-                        <span className="text-[34px] font-black text-slate-800 tabular-nums leading-none tracking-tight">{pkg.robux.toLocaleString()}</span>
+                        <RobuxIcon size={28} className="text-slate-800" />
+                        <span className="text-[32px] font-black text-slate-800 tabular-nums leading-none tracking-tight">{pkg.robux.toLocaleString()}</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 text-slate-400 font-bold relative">
-                          <div className="absolute inset-x-0 h-[2px] bg-slate-400 top-1/2 -translate-y-1/2 pointer-events-none" />
-                          <RobuxIcon size={22} />
-                          <span className="text-xl">{pkg.original.toLocaleString()}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-slate-400 font-bold relative text-sm sm:text-base">
+                          <div className="absolute inset-x-0 h-[1.5px] bg-slate-400 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <RobuxIcon size={18} />
+                          <span>{pkg.original.toLocaleString()}</span>
                         </div>
                         {pkg.more && (
-                          <div className="bg-[#EBEEF5] text-[#7A869A] font-black text-[11px] px-3 py-1 rounded-full">
+                          <div className="bg-[#EBEEF5] text-[#7A869A] font-black text-[10px] px-2 py-0.5 rounded-full">
                             + {pkg.more} more
                           </div>
                         )}
                       </div>
                     </div>
-                    <button className="bg-[#E8EBF2] hover:bg-[#DEE3ED] transition-all text-slate-800 font-black py-2.5 px-8 rounded-xl min-w-[140px] text-lg active:scale-[0.98]">
+                    <button className="bg-[#E8EBF2] hover:bg-[#DEE3ED] transition-all text-slate-800 font-black py-2 px-6 rounded-xl min-w-[120px] text-base active:scale-[0.98]">
                       {pkg.price}
                     </button>
                   </div>
@@ -353,13 +377,23 @@ export default function App() {
               setIsSettingsOpen(false);
               addToast("Settings saved!");
             }}
-            onLogout={() => {
-              const defaultUser = { displayName: "kwon", username: "kwon", robux: 8320 };
-              saveUser(defaultUser);
-              setIsVerified(false);
-              localStorage.removeItem("isVerified");
-              setIsSettingsOpen(false);
-              addToast("Logged out (demo reset)");
+            onLogout={async () => {
+              try {
+                await signOut(auth);
+                const defaultUser = { 
+                  displayName: "kwon", 
+                  username: "kwon", 
+                  robux: 8320,
+                  avatarUrl: "https://tr.rbxcdn.com/180DAY-40e9f0d0611c6d1d2b0e6e7c10b64ecc/150/150/AvatarHeadshot/Png/noFilter"
+                };
+                saveUser(defaultUser);
+                setIsVerified(false);
+                localStorage.removeItem("isVerified");
+                setIsSettingsOpen(false);
+                addToast("Logged out successfully");
+              } catch (e) {
+                console.error(e);
+              }
             }}
           />
         )}

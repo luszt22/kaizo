@@ -23,8 +23,21 @@ export default function Sidebar({ user }: SidebarProps) {
 
   return (
     <aside className="w-[240px] shrink-0 p-3 border-r border-gray-200 bg-white hidden lg:flex flex-col gap-1 overflow-y-auto h-[calc(100vh-56px)]">
-      <a href="#" className="flex items-center gap-3 p-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 italic transition-colors">
-        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900" />
+      <a href="#" className="flex items-center gap-3 p-2.5 rounded-lg text-sm font-bold text-slate-800 hover:bg-gray-100 transition-colors">
+        <div className="w-6 h-6 rounded-full overflow-hidden border border-[#BDC3C7]">
+          <img 
+            src={user.avatarUrl || "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-C318C9101602477C9F9A7C91ECEEE44A-Png/150/150/AvatarHeadshot/Webp/noFilter"} 
+            alt="User Avatar"
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (target.src !== "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-C318C9101602477C9F9A7C91ECEEE44A-Png/150/150/AvatarHeadshot/Webp/noFilter") {
+                target.src = "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-C318C9101602477C9F9A7C91ECEEE44A-Png/150/150/AvatarHeadshot/Webp/noFilter";
+              }
+            }}
+          />
+        </div>
         <span>{user.displayName}</span>
       </a>
       {navItems.map((item) => (

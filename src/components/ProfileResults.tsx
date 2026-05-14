@@ -42,6 +42,14 @@ export default function ProfileResults({ results, onSendRobux, onClose }: Profil
                     src={profile.avatarUrl} 
                     alt={profile.display} 
                     className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.display)}&background=random&color=fff&size=150`;
+                      if (target.src !== fallback) {
+                        target.src = fallback;
+                      }
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 font-bold text-2xl">
